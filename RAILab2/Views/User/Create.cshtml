@@ -1,0 +1,133 @@
+﻿@{
+    ViewData["Title"] = "Znajomi";
+}
+
+<h1>Znajomi</h1>
+
+<!-- Formularz dodawania znajomego -->
+<div>
+    <input type="text" id="friendLogin" placeholder="Wpisz login znajomego" />
+    <button onclick="addFriend()">Dodaj znajomego</button>
+</div>
+
+<!-- Lista znajomych -->
+<table id="friendsList">
+    <thead>
+        <tr>
+            <th>Login</th>
+            <th>Akcje</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Lista znajomych będzie tu wstawiana przez JavaScript -->
+    </tbody>
+</table>
+
+<!-- Import i eksport znajomych -->
+<div>
+    <button onclick="exportFriends()">Eksportuj znajomych</button>
+    <input type="file" id="importFile" />
+    <button onclick="importFriends()">Importuj znajomych</button>
+</div>
+
+@section Scripts {
+    <script>
+        // Funkcja do dodawania znajomego
+        function addFriend() {
+            const login = document.getElementById("friendLogin").value;
+            if (!login) {
+                alert("Podaj login znajomego.");
+                return;
+            }
+
+            fetch(`/Friends/Add/${login}`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result) {
+                        alert("Znajomy dodany.");
+                        refreshFriendsList(); // Odśwież listę po dodaniu
+                    } else {
+                        alert("Błąd dodawania znajomego.");
+                    }
+                });
+        }
+
+        // Funkcja do usuwania znajomego
+        function removeFriend(login) {
+            fetch(`/Friends/Del/${login}`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result) {
+                        alert("Znajomy usunięty.");
+                        refreshFriendsList(); // Odśwież listę po usunięciu
+                    } else {
+                        alert("Błąd usuwania znajomego.");
+                    }
+                });
+        }
+
+        // Funkcja do eksportu znajomych
+        function exportFriends() {
+            window.location.href = '/Friends/Export';
+        }
+
+        // Funkcja do importu znajomych
+        function importFriends() {
+            const file = document.getElementById("importFile").files[0];
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch('/Friends/Import', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result) {
+                        alert("Znajomi zaimportowani.");
+                        refreshFriendsList(); // Odśwież listę po imporcie
+                    } else {
+                        alert("Błąd importowania znajomych.");
+                    }
+                });
+        }
+
+        // Funkcja do odświeżania listy znajomych
+        function refreshFriendsList() {
+            fetch('/Friends/List')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Nie udało się pobrać listy znajomych');
+                    }
+                    return response.json(); // Oczekujemy odpowiedzi w formacie JSON
+                })
+                .then(friends => {
+                    const friendsList = document.getElementById("friendsList").getElementsByTagName("tbody")[0];
+                    friendsList.innerHTML = ''; // Wyczyść obecną listę
+
+                    if (friends.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="2">Brak znajomych</td>';
+                        friendsList.appendChild(row);
+                        return;
+                    }
+
+                    friends.forEach(friend => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${friend}</td><td><button onclick="removeFriend('${friend}')">Usuń</button></td>`;
+                        friendsList.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    alert('Błąd podczas ładowania listy znajomych.');
+                });
+        }
+
+        // Odśwież listę przy załadowaniu strony
+        window.onload = refreshFriendsList;
+    </script>
+}

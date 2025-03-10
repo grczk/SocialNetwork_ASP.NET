@@ -1,0 +1,39 @@
+﻿@model IEnumerable<RAILab2.Models.User>
+
+@{
+    ViewData["Title"] = "List";
+}
+
+<h1>List</h1>
+
+<p>
+    <a asp-action="Create">Dodaj nowego użytkownika</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+               Login
+            </th>
+            <th>
+                Data utworzenia
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Login)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DateTime)
+            </td>
+            <td>
+                @Html.ActionLink("Usuń", "Delete", new { login=item.Login })
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

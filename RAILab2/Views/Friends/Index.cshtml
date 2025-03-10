@@ -1,0 +1,151 @@
+﻿@using Microsoft.AspNetCore.Mvc.Localization
+@inject IViewLocalizer Localizer
+@model IEnumerable<RAILab2.Models.User>
+
+@{
+    ViewData["Title"] = "Lista znajomych";
+}
+
+<h1>@Localizer["ListaZnajomych"]</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <form id="addFriendForm" method="post">
+            <div class="form-group">
+                <label for="login">@Localizer["DodajZnajomego"]:</label>
+                <input type="text" id="login" name="login" class="form-control" required />
+            </div>
+            <button type="button" class="btn btn-primary mt-2" onclick="addFriend()">@Localizer["Dodaj"]</button>
+        </form>
+    </div>
+</div>
+
+<table class="table mt-4">
+    <thead>
+        <tr>
+            <th>Login</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody id="friendsList">
+        @foreach (var friend in Model)
+        {
+            <tr>
+                <td>@friend.Login</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="removeFriend('@friend.Login')">@Localizer["Usun"]</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div class="mt-4">
+    <form id="exportForm" method="get" class="d-inline">
+        <button type="button" class="btn btn-success" onclick="exportFriends()">@Localizer["Eksportuj"]</button>
+    </form>
+    <form id="importForm" method="post" enctype="multipart/form-data" class="d-inline">
+        <label for="file" class="form-label">@Localizer["ImportujListe"]</label>
+        <input type="file" id="file" name="file" class="form-control d-inline" style="width: auto;" />
+        <button type="button" class="btn btn-primary" onclick="importFriends()">@Localizer["Importuj"]</button>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function addFriend() {
+            const login = document.getElementById("login").value;
+            if (!login) {
+                alert("Podaj login znajomego.");
+                return;
+            }
+
+            fetch(`/Friends/Add/${login}`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result) {
+                        document.getElementById("login").value = '';
+                        refreshFriendsList();
+                    } else {
+                        alert("Błąd dodawania znajomego.");
+                    }
+                });
+        }
+
+        function removeFriend(login) {
+            fetch(`/Friends/Del/${login}`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result) {
+                        refreshFriendsList();
+                    } else {
+                        alert("Błąd usuwania znajomego.");
+                    }
+                });
+        }
+
+        function exportFriends() {
+            window.location.href = '/Friends/Export';
+        }
+
+        function importFriends() {
+            const file = document.getElementById("file").files[0];
+            if (!file) {
+                alert("Wybierz plik do importu.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            fetch('/Friends/Import', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result) {
+                        refreshFriendsList();
+                    } else {
+                        alert("Błąd importowania znajomych.");
+                    }
+                });
+        }
+
+        function refreshFriendsList() {
+            fetch('/Friends/List')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Nie udało się pobrać listy znajomych');
+                    }
+                    return response.json();
+                })
+                .then(friends => {
+                    const friendsList = document.getElementById("friendsList");
+                    friendsList.innerHTML = '';
+
+                    if (friends.length === 0) {
+                        const row = document.createElement('tr');
+                        row.innerHTML = '<td colspan="2">Brak znajomych</td>';
+                        friendsList.appendChild(row);
+                        return;
+                    }
+
+                    friends.forEach(friend => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${friend}</td><td><button class="btn btn-danger btn-sm" onclick="removeFriend('${friend}')">@Localizer["Usun"]</button></td>`;
+                        friendsList.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    alert('Błąd podczas ładowania listy znajomych.');
+                });
+        }
+
+        window.onload = refreshFriendsList;
+    </script>
+}
